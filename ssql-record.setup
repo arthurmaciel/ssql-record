@@ -1,0 +1,7 @@
+(compile -s -O2 ssql-record.scm -j ssql-record)
+(compile -s -O2 ssql-record.import.scm)
+
+(install-extension
+  'ssql-record
+  '("ssql-record.so" "ssql-record.import.so")
+  '((version 0.1)))
