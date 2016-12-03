@@ -1,4 +1,4 @@
-;; ssql-record - a simple egg to avoid SQL boilerplate code when prototyping
+;; ssql-record - a simple egg to avoid ssql boilerplate code when prototyping
 ;;
 ;; Copyright (c) 2016, Arthur Maciel
 ;; All rights reserved.
@@ -31,6 +31,7 @@
 
 (module ssql-record
     (define-ssql-record)
+
   (import chicken scheme)
   (use data-structures typed-records srfi-1 sql-null)
   
@@ -46,14 +47,14 @@
               (alist (extend-record-name "-alist"))
               (where-list (extend-record-name "-where-list"))
               (select (extend-record-name "-select"))
-              (select/id (extend-record-name "-select/id"))
+              (rec-select (extend-record-name "-rec-select"))
               (select-all (extend-record-name "-select-all"))
               (update (extend-record-name "-update"))
-              (update/id (extend-record-name "-update/id"))
+              (rec-update (extend-record-name "-rec-update"))
               (insert (extend-record-name "-insert"))
-              (insert-all (extend-record-name "-insert-all"))
+              (rec-insert (extend-record-name "-rec-insert"))
               (delete (extend-record-name "-delete"))
-              (delete/id (extend-record-name "-delete/id")))
+              (rec-delete (extend-record-name "-rec-delete")))
          `(begin
             (defstruct ,record-name
               ,@(zip field-names (circular-list (quote (sql-null)))))
@@ -75,15 +76,15 @@
                      (quote ,ids))))          
             
             (define ,select
-              (lambda (cols . rest)
-                `(select ,cols (from ,(quote ,record-name)) ,@rest)))
+              (lambda (cols #!optional (ssql '()))
+                `(select ,cols (from ,(quote ,record-name)) ,@ssql)))
 
-            (define ,select/id
-              (lambda (rec . rest)
+            (define ,rec-select
+              (lambda (rec . ssql)
                 `(select (columns ,@(quote ,field-names))
                    (from ,(quote ,record-name))
                    (where ,@(,where-list rec))
-                   ,@rest)))
+                   ,@ssql)))
             
             (define ,select-all
               (lambda (#!optional (ssql '()))
@@ -94,7 +95,7 @@
               (lambda (ssql)
                 `(update (table ,(quote ,record-name)) ,@ssql)))
             
-            (define ,update/id
+            (define ,rec-update
               (lambda (rec)
                 (let* ((alist-without-ids (filter (lambda (p) (not (member (car p) (quote ,ids)))) 
                                                   (,alist rec)))
@@ -106,20 +107,20 @@
             
             (define ,insert
               (lambda (ssql)
-                `(insert into ,(quote ,record-name) ,@ssql)))
+                `(insert (into ,(quote ,record-name)) ,@ssql)))
             
-            (define ,insert-all
+            (define ,rec-insert
               (lambda (rec)
                 (let* ((alist (,alist rec))
                        (keys (map car alist))
                        (values (map cdr alist)))
-                  `(insert into ,(quote ,record-name) (columns ,@keys) (values #(,@values))))))
+                  `(insert (into ,(quote ,record-name)) (columns ,@keys) (values #(,@values))))))
             
             (define ,delete
               (lambda (#!optional (ssql '()))
                 `(delete (from ,(quote ,record-name)) ,@ssql)))
             
-            (define ,delete/id
+            (define ,rec-delete
               (lambda (rec)
                 `(delete (from ,(quote ,record-name)) 
                          (where ,@(,where-list rec))))))))))
