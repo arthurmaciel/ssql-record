@@ -1,4 +1,4 @@
-;; ssql-record - a simple egg to avoid ssql boilerplate code when prototyping
+;; ssql-record - a simple egg to avoid SSQL boilerplate code when prototyping
 ;;
 ;; Copyright (c) 2016, Arthur Maciel
 ;; All rights reserved.
