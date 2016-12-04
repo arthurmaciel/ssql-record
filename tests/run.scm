@@ -29,7 +29,7 @@
   (test "<ssql-record>-fields"
         '(num date type author access_type)
         (doc-fields))
-
+  
   (test "<ssql-record>-select"
         '(select (columns num date) (from doc) (where (= id 3)))
         (doc-select '(columns num date) '((where (= id 3)))))
@@ -67,4 +67,4 @@
         (doc-rec-delete d)))
 
 (test-exit)
- 
+
