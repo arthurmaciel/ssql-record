@@ -51,8 +51,8 @@
         (doc-rec-update d))
 
   (test "<ssql-record>-insert"
-        '(insert (into doc) (3 "11/5/2016" 8 9 "Boo"))
-        (doc-insert '((3 "11/5/2016" 8 9 "Boo"))))
+        '(insert (into doc) (values #(3 "11/5/2016" 8 9 "Boo" NULL)))
+        (doc-insert '((values #(3 "11/5/2016" 8 9 "Boo" NULL)))))
 
   (test "<ssql-record>-rec-insert"
         `(insert (into doc) (columns num date type author access_type) (values #(1 "5/11/2016" 2 "Bob" NULL)))
