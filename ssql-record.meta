@@ -1,5 +1,5 @@
 ((egg "ssql-record.egg")
- (synopsis "A simple egg to avoid SQL boilerplate code when prototyping")
+ (synopsis "A simple egg to avoid SSQL boilerplate code when prototyping")
  (author "Arthur Maciel")
  (category database)
  (license "BSD")
