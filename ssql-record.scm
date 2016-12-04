@@ -33,7 +33,7 @@
     (define-ssql-record)
 
   (import chicken scheme)
-  (use data-structures typed-records srfi-1 sql-null)
+  (use data-structures typed-records srfi-1)
   
   (define-syntax define-ssql-record
     (ir-macro-transformer
@@ -57,7 +57,7 @@
               (rec-delete (extend-record-name "-rec-delete")))
          `(begin
             (defstruct ,record-name
-              ,@(zip field-names (circular-list (quote (sql-null)))))
+              ,@(zip field-names (circular-list (quote 'NULL))))
 
             (define ,list->ssql-record
               (lambda (lst)
@@ -111,12 +111,16 @@
             
             (define ,rec-insert
               (lambda (rec)
-                (let* ((alist (if (any sql-null? ids)
-                                  (filter (lambda (p) (not (member (car p) (quote ,ids)))) 
-                                          (,alist rec))
-                                  (,alist rec)))
-                       (keys (map car alist))
-                       (values (map cdr alist)))
+                (let* ((alist (,alist rec))
+                       (ids-values (map cdr 
+                                        (filter (lambda (p) (member (car p) (quote ,ids)))
+                                                alist)))
+                       (alist* (if (any (lambda (id) (eq? 'NULL id)) ids-values)
+                                   (filter (lambda (p) (not (member (car p) (quote ,ids))))
+                                           alist)
+                                   alist))
+                       (keys (map car alist*))
+                       (values (map cdr alist*)))
                   `(insert (into ,(quote ,record-name)) (columns ,@keys) (values #(,@values))))))
             
             (define ,delete

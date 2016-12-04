@@ -1,25 +1,25 @@
-(use test ssql-record sql-null)
+(use test ssql-record)
 
 (define-ssql-record doc (num date) type author access_type)
 
 (test-group "Record creation"
   (test "alist-><ssql-record>"
-        `((num . 1) (date . "5/11/2016") (type . 2) (author . "Bob") (access_type . ,(sql-null)))
+        `((num . 1) (date . "5/11/2016") (type . 2) (author . "Bob") (access_type . NULL))
         (doc->alist (alist->doc '((num . 1) (date . "5/11/2016") (type . 2) (author . "Bob")))))
 
   (test "list-><ssql-record>"
-        `((num . 1) (date . "5/11/2016") (type . 2) (author . "Bob") (access_type . ,(sql-null)))
+        `((num . 1) (date . "5/11/2016") (type . 2) (author . "Bob") (access_type . NULL))
         (doc->alist (list->doc '(1 "5/11/2016" 2 "Bob"))))
 
   (test "Keywords parameters"
-        `((num . 1) (date . "5/11/2016") (type . 2) (author . "Bob") (access_type . ,(sql-null)))
+        `((num . 1) (date . "5/11/2016") (type . 2) (author . "Bob") (access_type . NULL))
         (doc->alist (make-doc num: 1 date: "5/11/2016" type: 2 author: "Bob"))))
 
 (test-group "Record accessors"
   (define d (alist->doc '((num . 1) (date . "5/11/2016") (type . 2) (author . "Bob"))))
 
   (test "<ssql-record>->alist"
-        `((num . 1) (date . "5/11/2016") (type . 2) (author . "Bob") (access_type . ,(sql-null)))
+        `((num . 1) (date . "5/11/2016") (type . 2) (author . "Bob") (access_type . NULL))
         (doc->alist d))
   
   (test "<ssql-record>-<field>"
@@ -47,7 +47,7 @@
         (doc-update '((set (type 3) (author "Bob")) (where (= id 4)))))
 
   (test "<ssql-record>-rec-update"
-        `(update (table doc) (set (type 2) (author "Bob") (access_type ,(sql-null))) (where (= num 1) (= date "5/11/2016")))
+        `(update (table doc) (set (type 2) (author "Bob") (access_type NULL)) (where (= num 1) (= date "5/11/2016")))
         (doc-rec-update d))
 
   (test "<ssql-record>-insert"
@@ -55,7 +55,7 @@
         (doc-insert '((3 "11/5/2016" 8 9 "Boo"))))
 
   (test "<ssql-record>-rec-insert"
-        `(insert (into doc) (columns num date type author access_type) (values #(1 "5/11/2016" 2 "Bob" ,(sql-null))))
+        `(insert (into doc) (columns num date type author access_type) (values #(1 "5/11/2016" 2 "Bob" NULL)))
         (doc-rec-insert d))
 
   (test "<ssql-record>-delete"
