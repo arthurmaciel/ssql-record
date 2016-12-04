@@ -111,7 +111,10 @@
             
             (define ,rec-insert
               (lambda (rec)
-                (let* ((alist (,alist rec))
+                (let* ((alist (if (any sql-null? ids)
+                                  (filter (lambda (p) (not (member (car p) (quote ,ids)))) 
+                                          (,alist rec))
+                                  (,alist rec)))
                        (keys (map car alist))
                        (values (map cdr alist)))
                   `(insert (into ,(quote ,record-name)) (columns ,@keys) (values #(,@values))))))
