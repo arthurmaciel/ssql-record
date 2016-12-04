@@ -80,7 +80,7 @@
                 `(select ,cols (from ,(quote ,record-name)) ,@ssql)))
 
             (define ,rec-select
-              (lambda (rec . ssql)
+              (lambda (rec #!optional (ssql '()))
                 `(select (columns ,@(quote ,field-names))
                    (from ,(quote ,record-name))
                    (where ,@(,where-list rec))
