@@ -1,6 +1,6 @@
 ;; ssql-record - a simple egg to avoid SSQL boilerplate code when prototyping
 ;;
-;; Copyright (c) 2016, Arthur Maciel
+;; Copyright (c) 2017, Arthur Maciel
 ;; All rights reserved.
 ;;
 ;; Redistribution and use in source and binary forms, with or without
@@ -30,106 +30,126 @@
 ;; OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (module ssql-record
-    (define-ssql-record)
+(define-ssql-record)
 
-  (import chicken scheme)
-  (use data-structures typed-records srfi-1)
-  
-  (define-syntax define-ssql-record
-    (ir-macro-transformer
-     (lambda (e i c)
-       (let* ((record-name (cadr e))
-              (ids (car (cddr e)))
-              (field-names (flatten (cddr e)))
-              (list->ssql-record (string->symbol (conc "list->" (i record-name))))
-              (extend-record-name (lambda (ext) (string->symbol (conc (i record-name) ext))))            
-              (fields (extend-record-name "-fields"))
-              (alist (extend-record-name "-alist"))
-              (where-list (extend-record-name "-where-list"))
-              (select (extend-record-name "-select"))
-              (rec-select (extend-record-name "-rec-select"))
-              (select-all (extend-record-name "-select-all"))
-              (update (extend-record-name "-update"))
-              (rec-update (extend-record-name "-rec-update"))
-              (insert (extend-record-name "-insert"))
-              (rec-insert (extend-record-name "-rec-insert"))
-              (delete (extend-record-name "-delete"))
-              (rec-delete (extend-record-name "-rec-delete")))
-         `(begin
-            (defstruct ,record-name
-              ,@(zip field-names (circular-list (quote 'NULL))))
+(import chicken scheme)
+(use data-structures typed-records srfi-1)
 
-            (define ,list->ssql-record
-              (lambda (lst)
-                (,(string->symbol (conc "alist->" (i record-name)))
-                 (map cons (quote ,field-names) lst))))
-            
-            (define ,fields (lambda () (quote ,field-names)))
+(define-for-syntax translate
+  (lambda (str)
+    (string->symbol (string-translate* (->string str) '(("-" . "_"))))))
 
-            (define ,alist
-              (lambda (rec)
-                (,(string->symbol (conc (i record-name) "->alist")) rec)))
+(define-syntax define-ssql-record
+  (ir-macro-transformer
+   (lambda (e i c)
+     (let* ((record-name (cadr e))
+            (translated-record-name (translate (i record-name)))
+            (ids (car (cddr e)))
+            (translated-ids (map translate (i ids)))
+            (field-names (flatten (cddr e)))
+            (translated-field-names (map translate (i field-names)))
+            (list->ssql-record (string->symbol (conc "list->" (i record-name))))
+            (extend-record-name (lambda (ext) (string->symbol (conc (i record-name) ext))))            
+            (fields (extend-record-name "-fields"))
+            (alist (extend-record-name "->alist"))
+            (where-list (extend-record-name "-where-list"))
+            (select (extend-record-name "-select"))
+            (rec-select (extend-record-name "-rec-select"))
+            (select-all (extend-record-name "-select-all"))
+            (update (extend-record-name "-update"))
+            (rec-update (extend-record-name "-rec-update"))
+            (insert (extend-record-name "-insert"))
+            (rec-insert (extend-record-name "-rec-insert"))
+            (delete (extend-record-name "-delete"))
+            (rec-delete (extend-record-name "-rec-delete")))
+       `(begin
+          (defstruct ,record-name
+            ,@(zip field-names (circular-list (quote 'NULL))))
 
-            (define ,where-list
-              (lambda (rec)
-                (map (lambda (id) `(= ,id ,(cdr (assoc id (,alist rec)))))
-                     (quote ,ids))))          
-            
-            (define ,select
-              (lambda (cols #!optional (ssql '()))
-                `(select ,cols (from ,(quote ,record-name)) ,@ssql)))
+          (define ,list->ssql-record
+            (lambda (lst)
+              (,(string->symbol (conc "alist->" (i record-name)))
+               (map cons (quote ,(i field-names)) lst))))
+          
+          (define ,fields (lambda () (quote ,(i field-names))))
 
-            (define ,rec-select
-              (lambda (rec #!optional (ssql '()))
-                `(select (columns ,@(quote ,field-names))
-                   (from ,(quote ,record-name))
-                   (where ,@(,where-list rec))
-                   ,@ssql)))
-            
-            (define ,select-all
-              (lambda (#!optional (ssql '()))
-                `(select (columns ,@(quote ,field-names))
-                   (from ,(quote ,record-name)) ,@ssql)))
-            
-            (define ,update
-              (lambda (ssql)
-                `(update (table ,(quote ,record-name)) ,@ssql)))
-            
-            (define ,rec-update
-              (lambda (rec)
-                (let* ((alist-without-ids (filter (lambda (p) (not (member (car p) (quote ,ids)))) 
-                                                  (,alist rec)))
-                       (set-list (map (lambda (p) (list (car p) (cdr p))) ; proper list needed by ssql
-                                      alist-without-ids)))
-                  `(update (table ,(quote ,record-name)) 
-                           (set ,@set-list)
-                           (where ,@(,where-list rec))))))
-            
-            (define ,insert
-              (lambda (ssql)
-                `(insert (into ,(quote ,record-name)) ,@ssql)))
-            
-            (define ,rec-insert
-              (lambda (rec)
-                (let* ((alist (,alist rec))
-                       (ids-values (map cdr 
-                                        (filter (lambda (p) (member (car p) (quote ,ids)))
-                                                alist)))
-                       (alist* (if (any (lambda (id) (eq? 'NULL id)) ids-values)
-                                   (filter (lambda (p) (not (member (car p) (quote ,ids))))
-                                           alist)
-                                   alist))
-                       (keys (map car alist*))
-                       (values (map cdr alist*)))
-                  `(insert (into ,(quote ,record-name)) (columns ,@keys) (values #(,@values))))))
-            
-            (define ,delete
-              (lambda (#!optional (ssql '()))
-                `(delete (from ,(quote ,record-name)) ,@ssql)))
-            
-            (define ,rec-delete
-              (lambda (rec)
-                `(delete (from ,(quote ,record-name)) 
-                         (where ,@(,where-list rec))))))))))
+          (define ,alist
+            (lambda (rec)
+              (list . ,(map (lambda (field)
+                              `(cons (quote ,(translate field))
+                                     (,(string->symbol (conc (i record-name) "-" field)) rec)))
+                            (i field-names)))))
 
-  ) ;; End of module
+          (define ,where-list
+            (lambda (rec)
+              (map (lambda (id)
+                     `(= ,(translate id) ,(cdr (assoc id (,alist rec)))))
+                   (quote ,(i ids)))))          
+          
+          (define ,select
+            (lambda (cols #!optional (ssql '()))
+              `(select ,cols
+                 (from ,(quote ,translated-record-name))
+                 ,@ssql)))
+
+          (define ,rec-select
+            (lambda (rec #!optional (ssql '()))
+              `(select (columns ,@(quote ,translated-field-names))
+                 (from ,(quote ,translated-record-name))
+                 (where ,@(,where-list rec))
+                 ,@ssql)))
+          
+          (define ,select-all
+            (lambda (#!optional (ssql '()))
+              `(select (columns ,@(quote ,translated-field-names))
+                 (from ,(quote ,translated-record-name))
+                 ,@ssql)))
+          
+          (define ,update
+            (lambda (ssql)
+              `(update (table ,(quote ,translated-record-name))
+                       ,@ssql)))
+          
+          (define ,rec-update
+            (lambda (rec)
+              (let* ((alist-without-ids (filter (lambda (p)
+                                                  (not (member (car p) (quote ,(i ids)))))
+                                                (,alist rec)))
+                     (set-list (map (lambda (p)
+                                      (list (translate (car p)) (cdr p))) ; proper list needed by ssql
+                                    alist-without-ids)))
+                `(update (table ,(quote ,translated-record-name)) 
+                         (set ,@set-list)
+                         (where ,@(,where-list rec))))))
+          
+          (define ,insert
+            (lambda (ssql)
+              `(insert (into ,(quote ,translated-record-name)) ,@ssql)))
+          
+          (define ,rec-insert
+            (lambda (rec)
+              (let* ((alist (,alist rec))
+                     (ids-values (map cdr 
+                                      (filter (lambda (p) (member (car p) (quote ,(i ids))))
+                                              alist)))
+                     (alist* (if (any (lambda (id) (eq? 'NULL id)) ids-values)
+                                 (filter (lambda (p) (not (member (car p) (quote ,(i ids)))))
+                                         alist)
+                                 alist))
+                     (keys (map car alist*))
+                     (values (map cdr alist*)))
+                `(insert (into ,(quote ,translated-record-name))
+                         (columns ,@keys)
+                         (values #(,@values))))))
+          
+          (define ,delete
+            (lambda (#!optional (ssql '()))
+              `(delete (from ,(quote ,translated-record-name))
+                       ,@ssql)))
+          
+          (define ,rec-delete
+            (lambda (rec)
+              `(delete (from ,(quote ,translated-record-name)) 
+                       (where ,@(,where-list rec))))))))))
+
+) ;; End of module
