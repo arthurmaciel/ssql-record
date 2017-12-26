@@ -42,14 +42,14 @@
 (define-syntax define-ssql-record
   (ir-macro-transformer
    (lambda (e i c)
-     (let* ((record-name (cadr e))
-            (translated-record-name (translate (i record-name)))
-            (ids (car (cddr e)))
-            (translated-ids (map translate (i ids)))
-            (field-names (flatten (cddr e)))
-            (translated-field-names (map translate (i field-names)))
-            (list->ssql-record (string->symbol (conc "list->" (i record-name))))
-            (extend-record-name (lambda (ext) (string->symbol (conc (i record-name) ext))))            
+     (let* ((record-name (strip-syntax (cadr e)))
+            (translated-record-name (i (translate record-name)))
+            (ids (strip-syntax (car (cddr e))))
+            (translated-ids (map translate ids))
+            (field-names (strip-syntax (flatten (cddr e))))
+            (translated-field-names (map translate field-names))
+            (list->ssql-record (i (string->symbol (conc "list->" record-name))))
+            (extend-record-name (lambda (ext) (string->symbol (conc record-name ext))))
             (fields (extend-record-name "-fields"))
             (alist (extend-record-name "->alist"))
             (where-list (extend-record-name "-where-list"))
@@ -64,11 +64,11 @@
             (rec-delete (extend-record-name "-rec-delete")))
        `(begin
           (defstruct ,record-name
-            ,@(zip field-names (circular-list (quote 'NULL))))
+            ,@(zip (i field-names) (circular-list (quote 'NULL))))
 
           (define ,list->ssql-record
             (lambda (lst)
-              (,(string->symbol (conc "alist->" (i record-name)))
+              (,(string->symbol (i (conc "alist->" record-name)))
                (map cons (quote ,(i field-names)) lst))))
           
           (define ,fields (lambda () (quote ,(i field-names))))
@@ -77,8 +77,8 @@
             (lambda (rec)
               (list . ,(map (lambda (field)
                               `(cons (quote ,(translate field))
-                                     (,(string->symbol (conc (i record-name) "-" field)) rec)))
-                            (i field-names)))))
+                                     (,(i (string->symbol (conc record-name "-" field))) rec)))
+                            field-names))))
 
           (define ,where-list
             (lambda (rec)
